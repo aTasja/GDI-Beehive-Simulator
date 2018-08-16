@@ -13,6 +13,7 @@ namespace GDI_Beehive_Simulator
 
     using System.IO;
     using System.Runtime.Serialization.Formatters.Binary;
+    using System.Drawing.Printing;
 
     public partial class Form1 : Form
     {
@@ -234,14 +235,114 @@ namespace GDI_Beehive_Simulator
             
         }
 
-        private void printToolStripButton_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void timer2_Tick(object sender, EventArgs e)
         {
             renderer.AnimateBees();
+        }
+
+        private void printToolStripButton_Click(object sender, EventArgs e)
+        {
+            bool stoppedTimer = false;
+            if (timer1.Enabled)
+            {
+                timer1.Stop();
+                stoppedTimer = true;
+            }
+            PrintDocument document = new PrintDocument();
+            document.PrintPage += Document_PrintPage; ;
+            PrintPreviewDialog preview = new PrintPreviewDialog();
+            preview.Document = document;
+            preview.ShowDialog(this);
+            if (stoppedTimer)
+                timer1.Start();
+        }
+
+        private void Document_PrintPage(object sender, PrintPageEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            Size stringSize;
+            using (Font arial24bold = new Font("Arial", 24, FontStyle.Bold))
+            {
+                stringSize = Size.Ceiling(g.MeasureString("Bee Simulator", arial24bold));
+                g.FillEllipse(Brushes.Gray, new Rectangle(e.MarginBounds.X + 2, e.MarginBounds.Y + 2,
+                    stringSize.Width + 30, stringSize.Height + 30));
+                g.FillEllipse(Brushes.Black, new Rectangle(e.MarginBounds.X, e.MarginBounds.Y,
+                    stringSize.Width + 30, stringSize.Height + 30));
+                g.DrawString("Bee Simulator", arial24bold, Brushes.White,
+                    e.MarginBounds.X + 17, e.MarginBounds.Y + 17);
+                g.DrawString("Bee Simulator", arial24bold, Brushes.White,
+                    e.MarginBounds.X + 15, e.MarginBounds.Y + 15);
+            }
+            int tableX = e.MarginBounds.X + (int)stringSize.Width + 50;
+            int tableWidth = e.MarginBounds.X + e.MarginBounds.Width - tableX - 20;
+            int firstColumnX = tableX + 2;
+            int secondColumlnX = tableX + (tableWidth / 2) + 5;
+            int tableY = e.MarginBounds.Y;
+            //PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+            //    tableY, "Bees", Bees.Text);
+
+            tableY = PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+                tableY, "Bees", Bees.Text);
+            tableY = PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+                tableY, "Flowers", Flowers.Text);
+            tableY = PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+                tableY, "Honey in Hive", HoneyInHive.Text);
+            tableY = PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+                tableY, "Nectar in Flowers", NectarInFlowers.Text);
+            tableY = PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+                tableY, "Frames Run", FramesRun.Text);
+            tableY = PrintTableRow(g, tableX, tableWidth, firstColumnX, secondColumlnX,
+                tableY, "Frame Rate", FrameRate.Text);
+
+            g.DrawRectangle(Pens.Black, tableX, e.MarginBounds.Y,
+                tableWidth, tableY - e.MarginBounds.Y);
+           
+            g.DrawLine(Pens.Black, secondColumlnX, e.MarginBounds.Y, secondColumlnX, tableY);
+
+            using (Pen blackPen = new Pen(Brushes.Black, 2))
+            using (Bitmap hiveBitmap = new Bitmap(hiveForm.ClientSize.Width, hiveForm.ClientSize.Height))
+            using (Bitmap fieldBitmap = new Bitmap(fieldForm.ClientSize.Width, fieldForm.ClientSize.Height))
+            {
+                using (Graphics hiveGraphics = Graphics.FromImage(hiveBitmap))
+                {
+                    renderer.PaintHive(hiveGraphics);
+                }
+                int hiveWidth = e.MarginBounds.Width / 2;
+                float ratio = (float)hiveBitmap.Height / (float)hiveBitmap.Width;
+                int hiveHeight = (int)(hiveWidth * ratio);
+                int hiveX = e.MarginBounds.X + (e.MarginBounds.Width - hiveWidth) / 2;
+                int hiveY = e.MarginBounds.Height / 3;
+                g.DrawImage(hiveBitmap, hiveX, hiveY, hiveWidth, hiveHeight);
+                g.DrawRectangle(blackPen, hiveX, hiveY, hiveWidth, hiveHeight);
+
+                using (Graphics fieldGraphics = Graphics.FromImage(fieldBitmap))
+                {
+                    renderer.PaintField(fieldGraphics);
+                }
+                int fieldWidth = e.MarginBounds.Width;
+                ratio = (float)fieldBitmap.Height / (float)fieldBitmap.Width;
+                int fieldHeight = (int)(fieldWidth * ratio);
+                int fieldX = e.MarginBounds.X;
+                int fieldY = e.MarginBounds.Y + e.MarginBounds.Height - fieldHeight;
+                g.DrawImage(fieldBitmap, fieldX, fieldY, fieldWidth, fieldHeight);
+                g.DrawRectangle(blackPen, fieldX, fieldY, fieldWidth, fieldHeight);
+            }
+
+        }
+
+        private int PrintTableRow(Graphics printGraphics, 
+            int tableX, int tableWidth, int firstColumnX, int secondColumnX,
+            int tableY, string firstColumn, string secondColumn)
+        {
+            Font arial2 = new Font("Arial", 12);
+            Size stringSize = Size.Ceiling(printGraphics.MeasureString(firstColumn, arial2));
+            tableY += 2;
+            printGraphics.DrawString(firstColumn, arial2, Brushes.Black, firstColumnX, tableY);
+            printGraphics.DrawString(secondColumn, arial2, Brushes.Black, secondColumnX, tableY);
+            tableY += (int)stringSize.Height + 2;
+            printGraphics.DrawLine(Pens.Black, tableX, tableY, tableX + tableWidth, tableY);
+            arial2.Dispose();
+            return tableY;
         }
     }
 }
